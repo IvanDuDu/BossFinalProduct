@@ -1,0 +1,125 @@
+# ESP32 BossVerse System
+
+Hệ thống điều khiển relay thông minh sử dụng ESP32 với khả năng kết nối WiFi, MQTT và UDP.
+
+## Tính năng chính
+
+- **Kết nối WiFi**: Hỗ trợ cả chế độ Station và Access Point
+- **Giao thức MQTT**: Nhận lệnh điều khiển từ server
+- **Giao thức UDP**: Nhận dữ liệu cảm biến và cấu hình
+- **Điều khiển Relay**: Điều khiển 4 relay độc lập
+- **Lưu trữ**: Sử dụng EEPROM và NVS để lưu cấu hình
+- **Quản lý thiết bị**: Tự động thêm thiết bị mới dựa trên MAC address
+
+## Cấu trúc thư mục
+
+```
+├── platformio.ini          # Cấu hình PlatformIO
+├── include/                # Header files
+│   ├── Config.h           # Cấu hình chung
+│   ├── StorageManager.h   # Quản lý lưu trữ
+│   ├── WiFiManager.h      # Quản lý WiFi
+│   ├── MQTTManager.h      # Quản lý MQTT
+│   ├── RelayController.h  # Điều khiển relay
+│   └── ButtonManager.h    # Quản lý nút bấm
+├── src/                   # Source files
+│   ├── Config.cpp
+│   ├── StorageManager.cpp
+│   ├── WiFiManager.cpp
+│   ├── MQTTManager.cpp
+│   ├── RelayController.cpp
+│   ├── ButtonManager.cpp
+│   └── main.cpp          # File chính
+└── README.md
+```
+
+## Cấu hình phần cứng
+
+### Chân kết nối
+
+- **Relay 1**: GPIO 26
+- **Relay 2**: GPIO 33
+- **Relay 3**: GPIO 32
+- **Relay 4**: GPIO 14
+- **Button Clear**: GPIO 0 (nút BOOT)
+
+### Cách sử dụng nút Clear
+
+- **Click ngắn**: Xóa thông tin WiFi (NVS)
+- **Giữ > 3 giây**: Xóa danh sách thiết bị (EEPROM)
+
+## Cấu hình ban đầu
+
+1. **Kết nối ESP32**:
+   - Khi chưa có thông tin WiFi, ESP32 sẽ tạo Access Point
+   - SSID: `ESP32_AP`
+   - Password: `12345678`
+   - IP: `192.168.1.8`
+
+2. **Gửi cấu hình qua UDP**:
+   - Port: 1234
+   - Format: `ssid//password//mqtt_server//mqtt_port//mqtt_token//bossID`
+   - Ví dụ: `MyWiFi//123456//broker.hivemq.com//1883//mytoken//boss01`
+
+## Giao thức UDP cho dữ liệu cảm biến
+
+Format: `MAC_ADDRESS//VALUE`
+
+Ví dụ: `AA:BB:CC:DD:EE:FF//650`
+
+- Nếu VALUE > 400: Kích hoạt relay tương ứng
+- Nếu MAC chưa tồn tại: Tự động thêm thiết bị mới
+
+## Giao thức MQTT
+
+- **Subscribe**: `User/{bossID}`
+- **Publish**: `esp32/broker1`
+- **Message format**: JSON
+
+```json
+{
+  "bossID": "boss01",
+  "deviceMAC": "AA:BB:CC:DD:EE:FF",
+  "deviceID": 0,
+  "value": 650,
+  "action": "relay_triggered"
+}
+```
+
+## Biên dịch và Upload
+
+```bash
+# Cài đặt PlatformIO
+pip install platformio
+
+# Biên dịch
+pio run
+
+# Upload
+pio run --target upload
+
+# Monitor
+pio device monitor
+```
+
+## Troubleshooting
+
+1. **Không kết nối được WiFi**:
+   - Kiểm tra SSID/Password
+   - Sử dụng nút Clear để xóa cấu hình cũ
+
+2. **MQTT không kết nối**:
+   - Kiểm tra địa chỉ server và port
+   - Kiểm tra token xác thực
+
+3. **Relay không hoạt động**:
+   - Kiểm tra kết nối phần cứng
+   - Kiểm tra MAC address trong danh sách
+
+## Phát triển thêm
+
+- Thêm giao thức HTTP REST API
+- Hỗ trợ SSL/TLS cho MQTT
+- Web interface cho cấu hình
+- Thêm cảm biến nhiệt độ, độ ẩm
+- Hỗ trợ OTA (Over-The-Air) update
